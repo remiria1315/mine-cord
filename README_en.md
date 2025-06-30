@@ -1,5 +1,5 @@
 # mine-cord
-[JA](README.mc) / EN  
+[JA](README.md) / EN  
 I got so bored that I made a chat integration.
 
 I didn’t bother making a config.json.  
