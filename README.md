@@ -3,4 +3,4 @@
 
 config.jsonはめんどいから作ってません。
 62行くらいに設定あるよ！
-![](mine-cord/image/image1)
+![](image/image1)
