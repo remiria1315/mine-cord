@@ -1,5 +1,6 @@
 # mine-cord
 JA/[EN](README_en.md)
+
 なんか暇すぎてチャット連携作ってました
 
 config.jsonはめんどいから作ってません。
