@@ -63,6 +63,9 @@ const DISCORD_WEBHOOK_URL = '君のwebhookのURL！';
 const DISCORD_CHANNEL_ID = '連携するチャンネルのid！';
 const DISCORD_BOT_TOKEN = 'botのtoken！';
 
+const MCBE_HOST = '127.0.0.1';
+const MCBE_PORT = 19132;
+
 const cacheDir = './cache';
 if (!existsSync(cacheDir)) mkdirSync(cacheDir);
 
@@ -79,7 +82,6 @@ async function getSkinBase64(gamertag) {
   const buf = readFileSync(cachePath);
   return 'data:image/png;base64,' + buf.toString('base64');
 }
-
 (async () => {
   const options = {
     port: MCBE_PORT,
@@ -188,7 +190,6 @@ mcbeClient.on(ServerEvent.WorldAdd, ev => {
         }
         await rep.edit({ content: "", embeds: [embed] })
     } else if (message.attachments.size > 0) {
-        console.log(message.attachments)
         let files = ``
         message.attachments.forEach(value => {
           files+="\n    "+value.name
@@ -249,4 +250,3 @@ mcbeClient.on(ServerEvent.WorldAdd, ev => {
     }
   });
 })();
- 
