@@ -3,4 +3,4 @@
 
 config.jsonはめんどいから作ってません。
 62行くらいに設定あるよ！
-![](image/image1)
+![画像](image/image1)
