@@ -10,5 +10,5 @@ config.jsonはめんどいから作ってません。
 ## 入れ方！
 1. 緑色のcodeボタンからzipをダウンロードしてね！
 2. 解凍して！
-3. ```shell npm i```を実行して！
-4. ```shell node index.js```を実行する！
+3. ```npm i```を実行して！
+4. ```node index.js```を実行する！
