@@ -4,7 +4,7 @@ const { writeFileSync, existsSync, mkdirSync, readFileSync } = require('fs');
 const { join } = require('path');
 const { createCanvas, loadImage } = require('canvas');
 const { send } = require('process');
-
+// コード汚くてごめんね
 async function getXUID(gamertag) {
   const res = await fetch(`https://api.geysermc.org/v1/xbox/xuid/${gamertag}`);
   const json = await res.json();
@@ -58,7 +58,6 @@ async function generateIconFromSkin(imageBuffer, outputPath) {
   return canvas.toDataURL('image/png');
 }
 
-
 const DISCORD_WEBHOOK_URL = '君のwebhookのURL！';
 const DISCORD_CHANNEL_ID = '連携するチャンネルのid！';
 const DISCORD_BOT_TOKEN = 'botのtoken！';
@@ -82,6 +81,36 @@ async function getSkinBase64(gamertag) {
   const buf = readFileSync(cachePath);
   return 'data:image/png;base64,' + buf.toString('base64');
 }
+async function sendDiscordMessage(username, message) {
+  try {
+    const base64 = await getSkinBase64(username).catch(() => null);
+
+    if (!base64) {
+      await fetch(DISCORD_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, content: message }),
+      });
+      return;
+    }
+
+    await fetch(DISCORD_WEBHOOK_URL, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: username, avatar: base64 }),
+    });
+
+    await fetch(DISCORD_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: message }),
+    });
+
+  } catch (error) {
+    console.error('Discord送信エラー:', error);
+  }
+}
+
 (async () => {
   const options = {
     port: MCBE_PORT,
@@ -98,29 +127,14 @@ async function getSkinBase64(gamertag) {
       const players = event.world.players
       const host = (await event.world.getLocalPlayer()).name
       event.sender.sendMessage(`[§l§2mine§s-§9cord§r] status: \n  ping: ${ping}, \n  host: ${host}, \n  worldname: ${event.world.name}, \n  current_players: ${players.size} / ${event.world.maxPlayers}`)
+    } else if (message.startsWith("!parseraw")) {
+      console.log(await parseraw(message.slice(10), event.world, username))
     }
     console.log("<"+username+"> "+message)
-    const base64 = await getSkinBase64(username).catch(() => null);
-    if (!base64) {
-      await fetch(DISCORD_WEBHOOK_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, content: message }),
-      });
-      return;
-    }
-    await fetch(DISCORD_WEBHOOK_URL, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: username, avatar: base64 }),
-    });
+    sendDiscordMessage(username, message)
 
-    await fetch(DISCORD_WEBHOOK_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: message }),
-    });
   });
+
   
 async function sendmessage(name, content) {
 await fetch(DISCORD_WEBHOOK_URL, {
@@ -146,7 +160,66 @@ mcbeClient.on(ServerEvent.WorldAdd, ev => {
   ev.world.sendMessage(`[§l§2mine§s-§9cord§r]\n  connected`)
 
 })
-  
+Object.defineProperty(Object.prototype, 'keys', {get: function() { return Object.keys(this) }});
+async function parseraw(rawtext, world, sendername) {
+  rawtext = JSON.parse(rawtext.match(/"rawtext"\s*:\s*(\[[\s\S]*?])/)[1]);
+  let text = "";
+  for (let raw of rawtext) {
+    raw = Object.keys(raw).length == 1 ? raw : {"type": "not_rawtext"}
+    switch (raw.keys[0]) {
+      case "text": {
+        text += raw.text;
+        break;
+      }
+      case "selector": {
+        let res = await world.runCommand("testfor "+raw.selector)
+        res.statusCode == 0 ? text += res.victim.join(", ") : null;
+        break;
+      }
+      case "score": {
+        let obj = raw.score.objective;
+        let target = raw.score.name;
+        let res = await world.runCommand(`scoreboard players add ${target == "@s" ? sendername : target} ${obj} 0`)
+        let value = res.statusMessage?.match(/現在\s+(\d+)/)?.[1]
+        res.statusCode == 0 ? text+= value : null
+        break;
+      }
+    }
+  }
+  return text
+}
+const recentMessages = new Set();
+mcbeClient.on(ServerEvent.PlayerMessage, async event => {
+  const username = event.sender.name;
+  const message = event.message
+  if (username === '外部') return;
+  let type = event.type
+  let rawutil = require("socket-be").RawTextUtil
+  if(type == "tell") {
+    type = rawutil.isRawText(message) ? "tellraw" : "tell"
+  }
+  switch (type) {
+    case "me":
+        sendDiscordMessage(username, "* "+message)
+        console.log("* "+message)
+      break;
+    case "say":
+      sendmessage("sys", message)
+      console.log(message)
+      break
+    case "tell":
+      break
+    case "tellraw":
+      const messageId = message;
+      if (recentMessages.has(messageId)) return;
+      recentMessages.add(messageId);
+      setTimeout(() => recentMessages.delete(messageId), 100);
+      let parsed = await parseraw(message, event.world, username)
+      sendmessage("sys", parsed);
+      console.log(parsed)
+      break;
+  }
+});
   const discordBot = new DiscordClient({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
   });
