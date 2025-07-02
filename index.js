@@ -303,3 +303,5 @@ async function sendDiscordMessage(username, message) {
     }
   });
 })();
+
+console.log("\x1b[48;5;250m\x1b[30m/connect localhost:"+MCBE_PORT+"\x1b[0mで接続できるよ！")
